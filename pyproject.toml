@@ -23,6 +23,7 @@ dev = [
 [project.scripts]
 pyimpact = "pyimpact.cli.main:app"
 
+
 [build-system]
 requires = ["setuptools>=69"]
 build-backend = "setuptools.build_meta"
