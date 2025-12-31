@@ -1,13 +1,18 @@
-# src/pyimpact/analyzer/parser.py
-
 import ast
 from pathlib import Path
 from dataclasses import dataclass
 from typing import List, Optional
 
 
+# =========================
+# Data transfer objects
+# =========================
+
 @dataclass
 class FunctionDefInfo:
+    """
+    Lightweight representation of a function definition.
+    """
     name: str
     lineno: int
     col_offset: int
@@ -15,23 +20,54 @@ class FunctionDefInfo:
 
 @dataclass
 class CallSiteInfo:
+    """
+    Lightweight representation of a function call inside another function.
+    """
     caller: str
     callee: str
     lineno: int
     col_offset: int
 
 
+@dataclass
+class ImportInfo:
+    """
+    Represents an import statement.
+
+    Examples:
+      from a.b import c as d
+        module="a.b", name="c", alias="d"
+
+      import a.b as c
+        module="a.b", name=None, alias="c"
+    """
+    module: str
+    name: Optional[str]
+    alias: Optional[str]
+
+
+# =========================
+# AST Visitor
+# =========================
+
 class FunctionCallVisitor(ast.NodeVisitor):
     """
-    AST visitor that collects function definitions and call sites.
+    AST visitor that collects:
+    - function definitions
+    - call sites inside functions
+    - import statements
     """
 
     def __init__(self) -> None:
-        self.functions: list[FunctionDefInfo] = []
-        self.calls: list[CallSiteInfo] = []
+        self.functions: List[FunctionDefInfo] = []
+        self.calls: List[CallSiteInfo] = []
+        self.imports: List[ImportInfo] = []
+
         self._current_function: Optional[str] = None
 
-    def visit_FunctionDef(self, node: ast.FunctionDef):
+    # -------- Function definitions --------
+
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
         self.functions.append(
             FunctionDefInfo(
                 name=node.name,
@@ -47,10 +83,12 @@ class FunctionCallVisitor(ast.NodeVisitor):
 
         self._current_function = previous
 
-    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef):
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
         self.visit_FunctionDef(node)
 
-    def visit_Call(self, node: ast.Call):
+    # -------- Function calls --------
+
+    def visit_Call(self, node: ast.Call) -> None:
         if self._current_function is not None:
             callee_name = self._extract_callee_name(node.func)
             if callee_name:
@@ -68,6 +106,7 @@ class FunctionCallVisitor(ast.NodeVisitor):
     def _extract_callee_name(self, node: ast.AST) -> Optional[str]:
         """
         Extract function name from a call node.
+
         Examples:
           foo()        -> foo
           mod.foo()    -> foo
@@ -79,10 +118,48 @@ class FunctionCallVisitor(ast.NodeVisitor):
             return node.attr
         return None
 
+    # -------- Imports --------
 
-def parse_python_file(path: Path) -> tuple[List[FunctionDefInfo], List[CallSiteInfo]]:
+    def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
+        for alias in node.names:
+            self.imports.append(
+                ImportInfo(
+                    module=node.module or "",
+                    name=alias.name,
+                    alias=alias.asname,
+                )
+            )
+
+    def visit_Import(self, node: ast.Import) -> None:
+        for alias in node.names:
+            self.imports.append(
+                ImportInfo(
+                    module=alias.name,
+                    name=None,
+                    alias=alias.asname,
+                )
+            )
+
+
+# =========================
+# Public API
+# =========================
+
+def parse_python_file(
+    path: Path,
+) -> tuple[
+    List[FunctionDefInfo],
+    List[CallSiteInfo],
+    List[ImportInfo],
+]:
     """
-    Parse a Python file and extract function definitions and call sites.
+    Parse a Python file and extract:
+    - function definitions
+    - call sites
+    - import statements
+
+    This function is Python-specific but returns language-agnostic
+    data structures suitable for graph construction and resolution.
     """
     if not path.exists():
         raise FileNotFoundError(path)
@@ -93,4 +170,4 @@ def parse_python_file(path: Path) -> tuple[List[FunctionDefInfo], List[CallSiteI
     visitor = FunctionCallVisitor()
     visitor.visit(tree)
 
-    return visitor.functions, visitor.calls
+    return visitor.functions, visitor.calls, visitor.imports

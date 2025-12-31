@@ -8,7 +8,7 @@ from pyimpact.analyzer.parser import parse_python_file
 def test_parser_finds_functions():
     path = Path("tests/fixtures/parser_sample.py")
 
-    functions, calls = parse_python_file(path)
+    functions, calls, imports = parse_python_file(path)
     function_names = {f.name for f in functions}
 
     assert function_names == {"a", "b", "d"}
@@ -17,7 +17,7 @@ def test_parser_finds_functions():
 def test_parser_finds_call_sites():
     path = Path("tests/fixtures/parser_sample.py")
 
-    _, calls = parse_python_file(path)
+    _, calls, imports = parse_python_file(path)
     call_pairs = {(c.caller, c.callee) for c in calls}
 
     assert ("a", "b") in call_pairs
@@ -36,7 +36,7 @@ def f():
 """
     )
 
-    _, calls = parse_python_file(file)
+    _, calls, imports = parse_python_file(file)
     call_pairs = {(c.caller, c.callee) for c in calls}
 
     assert ("f", "g") in call_pairs

@@ -47,6 +47,7 @@ class DependencyGraph:
     nodes: Dict[SymbolId, FunctionSymbol] = field(default_factory=dict)
     edges: Dict[SymbolId, Set[SymbolId]] = field(default_factory=dict)
     reverse_edges: Dict[SymbolId, Set[SymbolId]] = field(default_factory=dict)
+    unresolved_calls: list[CallSite] = field(default_factory=list)
 
     def add_node(self, symbol: FunctionSymbol) -> None:
         """Add a symbol to the graph."""
