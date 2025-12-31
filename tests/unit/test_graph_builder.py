@@ -1,90 +1,54 @@
 from pathlib import Path
-from typing import Iterable
 
-from pyimpact.core.ids import SymbolId
-from pyimpact.core.model import (
-    CallSite,
-    CodeLocation,
-    DependencyGraph,
-    FunctionSymbol,
-)
+from pyimpact.analyzer.graph_builder import GraphBuilder
 from pyimpact.analyzer.parser import FunctionDefInfo, CallSiteInfo
 
 
-class GraphBuilder:
-    """
-    Builds a DependencyGraph from parsed source files.
-    """
+def test_graph_builder_creates_nodes_and_edges():
+    builder = GraphBuilder()
 
-    def __init__(self, language: str = "python") -> None:
-        self.language = language
+    functions = [
+        FunctionDefInfo(name="a", lineno=1, col_offset=0),
+        FunctionDefInfo(name="b", lineno=5, col_offset=0),
+    ]
 
-    def build(
-        self,
-        file_path: Path,
-        module_name: str,
-        functions: Iterable[FunctionDefInfo],
-        calls: Iterable[CallSiteInfo],
-    ) -> DependencyGraph:
-        """
-        Build a dependency graph for a single module.
+    calls = [
+        CallSiteInfo(caller="a", callee="b", lineno=2, col_offset=4),
+        CallSiteInfo(caller="a", callee="c", lineno=3, col_offset=4),
+    ]
 
-        Args:
-            file_path: Path to the source file
-            module_name: Logical module name (e.g. src.service.user)
-            functions: Parsed function definitions
-            calls: Parsed call sites
+    graph = builder.build(
+        file_path=Path("mod.py"),
+        module_name="mod",
+        functions=functions,
+        calls=calls,
+    )
 
-        Returns:
-            DependencyGraph
-        """
-        graph = DependencyGraph()
+    ids = list(graph.nodes.keys())
+    id_map = {id.qualname: id for id in ids}
 
-        # Step 1: create function symbols
-        name_to_symbol: dict[str, SymbolId] = {}
+    assert "a" in id_map
+    assert "b" in id_map
 
-        for fn in functions:
-            symbol_id = SymbolId(
-                language=self.language,
-                module=module_name,
-                qualname=fn.name,
-            )
+    a_id = id_map["a"]
+    b_id = id_map["b"]
 
-            symbol = FunctionSymbol(
-                id=symbol_id,
-                name=fn.name,
-                module=module_name,
-                location=CodeLocation(
-                    file_path=file_path,
-                    line=fn.lineno,
-                    column=fn.col_offset,
-                ),
-            )
+    assert b_id in graph.edges[a_id]
+    assert a_id in graph.reverse_edges[b_id]
 
-            graph.add_node(symbol)
-            name_to_symbol[fn.name] = symbol_id
 
-        # Step 2: add edges for calls
-        for call in calls:
-            caller_id = name_to_symbol.get(call.caller)
-            if caller_id is None:
-                continue
+def test_graph_builder_ignores_unresolved_calls():
+    builder = GraphBuilder()
 
-            callee_id = name_to_symbol.get(call.callee)
+    functions = [FunctionDefInfo(name="a", lineno=1, col_offset=0)]
+    calls = [CallSiteInfo(caller="a", callee="missing", lineno=2, col_offset=4)]
 
-            call_site = CallSite(
-                caller_id=caller_id,
-                callee_name=call.callee,
-                callee_id=callee_id,
-                location=CodeLocation(
-                    file_path=file_path,
-                    line=call.lineno,
-                    column=call.col_offset,
-                ),
-            )
+    graph = builder.build(
+        file_path=Path("mod.py"),
+        module_name="mod",
+        functions=functions,
+        calls=calls,
+    )
 
-            # Only add edge if callee resolved in same module
-            if callee_id:
-                graph.add_edge(caller_id, callee_id)
-
-        return graph
+    a_id = next(iter(graph.nodes))
+    assert graph.edges[a_id] == set()
