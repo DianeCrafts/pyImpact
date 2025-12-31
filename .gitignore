@@ -1,0 +1,47 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# ---- Virtual Environments ----
+.venv/
+venv/
+env/
+ENV/
+
+# ---- Packaging ----
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# ---- Tooling ----
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.cache/
+
+# ---- OS ----
+.DS_Store
+Thumbs.db
+
+# ---- Editors ----
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ---- Logs ----
+*.log
+
+# ---- Graphviz ----
+*.dot
+*.svg
+*.png
+
+# ---- Docker ----
+docker-compose.override.yml
