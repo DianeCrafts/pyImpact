@@ -12,27 +12,29 @@ from pyimpact.core.model import DependencyGraph
 def run_impact_analysis(
     function_name: str,
     project_root: Path,
-) -> tuple[set[SymbolId], set[SymbolId]]:
+) -> tuple[
+    DependencyGraph,
+    SymbolId,
+    set[SymbolId],
+    set[SymbolId],
+]:
     """
-    Run impact analysis for a given function in a project directory.
+    Run impact analysis for a given function.
 
-    This function orchestrates:
-    - scanning
-    - parsing
-    - graph construction
-    - call resolution
-    - impact queries
+    Returns:
+        full_graph,
+        target_symbol,
+        downstream_symbols,
+        upstream_symbols
     """
     builder = GraphBuilder()
     full_graph = DependencyGraph()
 
-    # --------------------------------------------------
-    # Step 1–3: Scan → Parse → Build graphs
-    # --------------------------------------------------
+    # Step 1–3: Scan → Parse → Build
     for file_path in scan_python_files(project_root):
-        module_name = file_path.stem  # naive, improved later
+        module_name = file_path.stem
         functions, calls, imports = parse_python_file(file_path)
- 
+
         graph = builder.build(
             file_path=file_path,
             module_name=module_name,
@@ -40,7 +42,7 @@ def run_impact_analysis(
             calls=calls,
             imports=imports,
         )
-        # Merge module graph into global graph
+
         full_graph.nodes.update(graph.nodes)
 
         for k, v in graph.edges.items():
@@ -54,19 +56,11 @@ def run_impact_analysis(
     if not full_graph.nodes:
         raise ValueError("No Python functions found in project")
 
-    # --------------------------------------------------
-    # STEP 4 — Resolve cross-file calls (THIS IS THE KEY)
-    # --------------------------------------------------
-    resolver = Resolver()
-    resolver.resolve(full_graph)
+    # Step 4: Resolve
+    Resolver().resolve(full_graph)
 
-    # --------------------------------------------------
-    # Step 5: Locate target symbol
-    # --------------------------------------------------
-    matches = [
-        sid for sid in full_graph.nodes
-        if sid.qualname == function_name
-    ]
+    # Step 5: Find target
+    matches = [sid for sid in full_graph.nodes if sid.qualname == function_name]
 
     if not matches:
         raise ValueError(f"Function '{function_name}' not found")
@@ -79,12 +73,9 @@ def run_impact_analysis(
 
     target_id = matches[0]
 
-    # --------------------------------------------------
     # Step 6: Impact analysis
-    # --------------------------------------------------
     analyzer = ImpactAnalyzer(full_graph)
-
     downstream = analyzer.downstream(target_id)
     upstream = analyzer.upstream(target_id)
 
-    return downstream, upstream
+    return full_graph, target_id, downstream, upstream

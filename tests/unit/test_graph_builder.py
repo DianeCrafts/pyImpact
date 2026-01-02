@@ -22,6 +22,7 @@ def test_graph_builder_creates_nodes_and_edges():
         module_name="mod",
         functions=functions,
         calls=calls,
+        imports=[], 
     )
 
     ids = list(graph.nodes.keys())
@@ -48,7 +49,9 @@ def test_graph_builder_ignores_unresolved_calls():
         module_name="mod",
         functions=functions,
         calls=calls,
+        imports=[],  
     )
+
 
     a_id = next(iter(graph.nodes))
     assert graph.edges[a_id] == set()

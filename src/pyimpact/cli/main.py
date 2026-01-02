@@ -1,49 +1,74 @@
 from pathlib import Path
 import typer
+
+from pyimpact.app.impact import run_impact_analysis
 from pyimpact.app.callers import run_callers
 from pyimpact.app.callees import run_callees
-from pyimpact.app.impact import run_impact_analysis
-from pyimpact.app.visualize import visualize
-from pyimpact.query.subgraph import SubgraphMode
-
+from pyimpact.app.colors import impact_colors
+from pyimpact.app.visualize import visualize_svg
+from pyimpact.query.subgraph import extract_subgraph
+from pyimpact.reporting.graphviz import render_svg
 
 app = typer.Typer(
     help="pyimpact: dependency graph + impact analysis for Python codebases"
 )
 
 
-@app.callback()
-def main():
-    """Analyze Python codebases to understand dependencies and impact."""
-    pass
-
-
-@app.command()
-def hello():
-    """Sanity check command."""
-    typer.echo("pyimpact is installed and working ✅")
-
-
 @app.command()
 def impact(function: str, path: Path = Path(".")):
-    """Visualize impact graph for a function."""
-    visualize(function, path, SubgraphMode.IMPACT)
+    """
+    Visualize full impact (callers + callees).
+    """
+    graph, target, downstream, upstream = run_impact_analysis(function, path)
 
+    nodes, edges = extract_subgraph(
+        graph=graph,
+        target=target,
+        upstream=upstream,
+        downstream=downstream,
+    )
+
+    roles = impact_colors(target, upstream, downstream)
+    dot = render_svg(nodes, edges, roles)
+    visualize_svg(dot)
 
 
 @app.command()
 def callers(function: str, path: Path = Path(".")):
-    """Visualize callers graph for a function."""
-    visualize(function, path, SubgraphMode.CALLERS)
+    """
+    Visualize callers only.
+    """
+    graph, target, _, upstream = run_impact_analysis(function, path)
 
+    nodes, edges = extract_subgraph(
+        graph=graph,
+        target=target,
+        upstream=upstream,
+        downstream=set(),
+    )
 
+    roles = impact_colors(target, upstream, set())
+    dot = render_svg(nodes, edges, roles)
+    visualize_svg(dot)
 
 
 @app.command()
 def callees(function: str, path: Path = Path(".")):
-    """Visualize callees graph for a function."""
-    visualize(function, path, SubgraphMode.CALLEES)
+    """
+    Visualize callees only.
+    """
+    graph, target, downstream, _ = run_impact_analysis(function, path)
 
+    nodes, edges = extract_subgraph(
+        graph=graph,
+        target=target,
+        upstream=set(),
+        downstream=downstream,
+    )
+
+    roles = impact_colors(target, set(), downstream)
+    dot = render_svg(nodes, edges, roles)
+    visualize_svg(dot)
 
 
 # @app.command()

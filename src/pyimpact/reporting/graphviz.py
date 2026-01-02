@@ -1,6 +1,12 @@
 from graphviz import Digraph
-
 from pyimpact.core.ids import SymbolId
+
+
+def _node_id(symbol: SymbolId) -> str:
+    """
+    Generate a Graphviz-safe node ID.
+    """
+    return f"{symbol.language}_{symbol.module}_{symbol.qualname}".replace(".", "_")
 
 
 def render_svg(
@@ -8,12 +14,10 @@ def render_svg(
     edges: set[tuple[SymbolId, SymbolId]],
     roles: dict[SymbolId, str],
 ) -> Digraph:
-    """
-    Render a Graphviz Digraph object with styling.
-    """
     dot = Digraph("PyImpact", format="svg")
     dot.attr(rankdir="LR")
 
+    # Add nodes
     for node in nodes:
         role = roles.get(node)
 
@@ -31,13 +35,14 @@ def render_svg(
             style = "solid"
 
         dot.node(
-            name=str(node),
-            label=node.qualname,
+            name=_node_id(node),
+            label=f"{node.module}.{node.qualname}",
             color=color,
             style=style,
         )
 
+    # Add edges
     for src, dst in edges:
-        dot.edge(str(src), str(dst))
+        dot.edge(_node_id(src), _node_id(dst))
 
     return dot
