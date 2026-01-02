@@ -166,7 +166,6 @@ def parse_python_file(
 
     source = path.read_text(encoding="utf-8")
     tree = ast.parse(source, filename=str(path))
-
     visitor = FunctionCallVisitor()
     visitor.visit(tree)
 

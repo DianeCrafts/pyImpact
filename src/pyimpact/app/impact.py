@@ -31,8 +31,8 @@ def run_impact_analysis(
     # --------------------------------------------------
     for file_path in scan_python_files(project_root):
         module_name = file_path.stem  # naive, improved later
-
         functions, calls, imports = parse_python_file(file_path)
+ 
         graph = builder.build(
             file_path=file_path,
             module_name=module_name,
@@ -40,7 +40,6 @@ def run_impact_analysis(
             calls=calls,
             imports=imports,
         )
-
         # Merge module graph into global graph
         full_graph.nodes.update(graph.nodes)
 

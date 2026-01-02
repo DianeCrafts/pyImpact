@@ -58,11 +58,7 @@ class GraphBuilder:
         name_to_symbol: dict[str, SymbolId] = {}
 
         for fn in functions:
-            symbol_id = SymbolId(
-                language=self.language,
-                module=module_name,
-                qualname=fn.name,
-            )
+            symbol_id = SymbolId(language=self.language,module=module_name,qualname=fn.name)
 
             symbol = FunctionSymbol(
                 id=symbol_id,
