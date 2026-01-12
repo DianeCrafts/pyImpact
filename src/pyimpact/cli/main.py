@@ -2,8 +2,6 @@ from pathlib import Path
 import typer
 
 from pyimpact.app.impact import run_impact_analysis
-from pyimpact.app.callers import run_callers
-from pyimpact.app.callees import run_callees
 from pyimpact.app.colors import impact_colors
 from pyimpact.app.visualize import visualize_svg
 from pyimpact.query.subgraph import extract_subgraph
