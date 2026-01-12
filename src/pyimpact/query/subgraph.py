@@ -1,4 +1,4 @@
-from typing import Dict, Set
+from typing import Set
 
 from pyimpact.core.ids import SymbolId
 from pyimpact.core.model import DependencyGraph
